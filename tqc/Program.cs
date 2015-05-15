@@ -16,11 +16,13 @@ namespace tqc
         private string version;
         private string folder;
         private string server;
+        private string lang;
 
         public Compiler()
         {
             server = "https://compiler1.tinyqueries.com";
             folder = ".";
+            lang = "";
         }
         
         public void Init(string[] args)
@@ -37,7 +39,8 @@ namespace tqc
             // Init post vars
             var postVars = new NameValueCollection()
             {
-                { "api_key", apiKey }
+                { "api_key", apiKey },
+                { "lang", lang }
             };
 
             string[] files = Directory.GetFiles(folder + "\\tiny");
@@ -106,17 +109,27 @@ namespace tqc
                 }
 
                 // Parse XML and write SQL & json files
-                foreach (XmlNode query in xml.DocumentElement.SelectNodes("/compiled/query"))
+                if (Directory.Exists(folder + "\\sql") && Directory.Exists(folder + "\\interface"))
+                    foreach (XmlNode query in xml.DocumentElement.SelectNodes("/compiled/query"))
+                    {
+                        var queryID = query.Attributes["id"].InnerText;
+                        var queryInterface = query.SelectSingleNode("interface");
+                        var querySQL = query.SelectSingleNode("sql");
+
+                        if (querySQL != null)
+                            File.WriteAllText(folder + "\\sql\\" + queryID + ".sql", querySQL.InnerText);
+
+                        if (queryInterface != null)
+                            File.WriteAllText(folder + "\\interface\\" + queryID + ".json", queryInterface.InnerText);
+                    }
+
+                // Write language specific files
+                foreach (XmlNode file in xml.DocumentElement.SelectNodes("/compiled/file"))
                 {
-                    var queryID = query.Attributes["id"].InnerText;
-                    var queryInterface = query.SelectSingleNode("interface");
-                    var querySQL = query.SelectSingleNode("sql");
+                    var filelang = file.Attributes["lang"].InnerText;
+                    var filename = file.Attributes["name"].InnerText;
 
-                    if (querySQL != null)
-                        File.WriteAllText(folder + "\\sql\\" + queryID + ".sql", querySQL.InnerText);
-
-                    if (queryInterface != null)
-                        File.WriteAllText(folder + "\\interface\\" + queryID + ".json", queryInterface.InnerText);
+                    File.WriteAllText(folder + "\\" + filelang + "\\" + filename, file.InnerText);
                 }
             }
 
@@ -160,6 +173,7 @@ namespace tqc
             switch (key)
             {
                 case "/apikey": apiKey = value; break;
+                case "/lang": lang = value; break;
                 case "/server": server = value; break;
                 case "/version": version = value; break;
                 default: throw new Exception("Unknown argument: " + key);
@@ -170,14 +184,19 @@ namespace tqc
 
     class Program
     {
+        public const string version = "v1.0";
+
         static int Main(string[] args)
         {
             if (args.Length == 0)
             {
-                Console.WriteLine("Usage:\ntqc /apikey:[YOUR-API-KEY] [PATH-TO-QUERIES-FOLDER]\n");
-                Console.WriteLine("Optional parameters:");
-                Console.WriteLine("/server:[URL-TO-COMPILER-SERVER]");
-                Console.WriteLine("/version:[COMPILER-VERSION]");
+                Console.WriteLine("tqc " + version);
+                Console.WriteLine("Commandline tool for the TinyQueries compiler\n");
+                Console.WriteLine("Usage:\n\ttqc /apikey:[YOUR-API-KEY] [PATH-TO-QUERIES-FOLDER]\n");
+                Console.WriteLine("Optional parameters:\n");
+                Console.WriteLine("/lang:[PROGRAMMING-LANGUAGE]\n\tCan be cs or php - default is language you chose when signing up\n");
+                Console.WriteLine("/server:[URL-TO-COMPILER-SERVER]\n\tDefault is https://compiler1.tinyqueries.com\n");
+                Console.WriteLine("/version:[COMPILER-VERSION]\n\tDefault is latest version\n");
                 return 0;
             }
 
