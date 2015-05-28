@@ -40,7 +40,8 @@ namespace tqc
             var postVars = new NameValueCollection()
             {
                 { "api_key", apiKey },
-                { "lang", lang }
+                { "lang", lang },
+                { "version", version }
             };
 
             string[] files = Directory.GetFiles(folder + "\\tiny");
@@ -108,6 +109,12 @@ namespace tqc
                     throw new Exception("Cannot parse respons coming from compiler as XML:\n\n" + responsBody);
                 }
 
+                if (!Directory.Exists(folder + "\\sql") && 
+                    !Directory.Exists(folder + "\\interface") &&
+                    !Directory.Exists(folder + "\\" + lang))
+                    throw new Exception("Output folder(s) are missing - either create folders 'sql' and 'interface' or a folder named as the lang-parameter, e.g. 'php' or 'cs'");
+
+
                 // Parse XML and write SQL & json files
                 if (Directory.Exists(folder + "\\sql") && Directory.Exists(folder + "\\interface"))
                     foreach (XmlNode query in xml.DocumentElement.SelectNodes("/compiled/query"))
@@ -124,13 +131,14 @@ namespace tqc
                     }
 
                 // Write language specific files
-                foreach (XmlNode file in xml.DocumentElement.SelectNodes("/compiled/file"))
-                {
-                    var filelang = file.Attributes["lang"].InnerText;
-                    var filename = file.Attributes["name"].InnerText;
+                if (Directory.Exists(folder + "\\" + lang))
+                    foreach (XmlNode file in xml.DocumentElement.SelectNodes("/compiled/file"))
+                    {
+                        var filelang = file.Attributes["lang"].InnerText;
+                        var filename = file.Attributes["name"].InnerText;
 
-                    File.WriteAllText(folder + "\\" + filelang + "\\" + filename, file.InnerText);
-                }
+                        File.WriteAllText(folder + "\\" + filelang + "\\" + filename, file.InnerText);
+                    }
             }
 
         }
@@ -184,7 +192,7 @@ namespace tqc
 
     class Program
     {
-        public const string version = "v1.0";
+        public const string version = "v1.0.1";
 
         static int Main(string[] args)
         {
