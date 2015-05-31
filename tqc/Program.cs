@@ -117,6 +117,14 @@ namespace tqc
 
                 // Parse XML and write SQL & json files
                 if (Directory.Exists(folder + "\\sql") && Directory.Exists(folder + "\\interface"))
+                {
+                    // Get _project file
+                    var _project = xml.DocumentElement.SelectSingleNode("/compiled/interface");
+
+                    if (_project != null)
+                        File.WriteAllText(folder + "\\interface\\_project.json", _project.InnerText);
+
+                    // Loop through the queries
                     foreach (XmlNode query in xml.DocumentElement.SelectNodes("/compiled/query"))
                     {
                         var queryID = query.Attributes["id"].InnerText;
@@ -129,6 +137,7 @@ namespace tqc
                         if (queryInterface != null)
                             File.WriteAllText(folder + "\\interface\\" + queryID + ".json", queryInterface.InnerText);
                     }
+                }
 
                 // Write language specific files
                 if (Directory.Exists(folder + "\\" + lang))
@@ -192,7 +201,7 @@ namespace tqc
 
     class Program
     {
-        public const string version = "v1.0.1";
+        public const string version = "v1.0.2";
 
         static int Main(string[] args)
         {
